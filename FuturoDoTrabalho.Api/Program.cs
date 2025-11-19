@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc.Versioning;
 using FuturoDoTrabalho.Api.Data;
 using FuturoDoTrabalho.Api.Repositories;
 using FuturoDoTrabalho.Api.Services;
+using FuturoDoTrabalho.Api.Filters;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -42,11 +43,38 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API REST para gerenciamento de funcionários e departamentos - Versão 2 (Avançada com paginação e PATCH)",
     });
     
-    // Resolver conflitos entre v1 e v2
-    options.ResolveConflictingActions(apiDescriptions =>
+    // Filtrar endpoints por versão - v1 exclui PATCH
+    options.DocInclusionPredicate((docName, apiDesc) =>
     {
-        return apiDescriptions.First();
+        // Verificar versão pelo caminho da ação
+        var actionDescriptor = apiDesc.ActionDescriptor;
+        if (actionDescriptor == null)
+            return true;
+
+        var controllerName = actionDescriptor.DisplayName;
+        
+        if (docName == "v1")
+        {
+            // v1 não deve mostrar PATCH
+            var isPatchMethod = apiDesc.HttpMethod?.Equals("PATCH", StringComparison.OrdinalIgnoreCase) == true;
+            if (isPatchMethod)
+                return false;
+            
+            // Mostrar apenas endpoints de v1
+            return controllerName?.Contains("FuturoDoTrabalho.Api.Controllers.v1") == true;
+        }
+
+        if (docName == "v2")
+        {
+            // Mostrar apenas endpoints de v2
+            return controllerName?.Contains("FuturoDoTrabalho.Api.Controllers.v2") == true;
+        }
+
+        return false;
     });
+    
+    // Pré-preencer e bloquear o parâmetro "version" de acordo com a versão selecionada
+    options.OperationFilter<SetVersionParameter>();
 });
 
 // Add MySQL Database Context
@@ -83,12 +111,17 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+    
+    // Servir arquivo estático customizado do Swagger
+    app.UseStaticFiles();
+    
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "GD Solutions v1 - Básica");
         options.SwaggerEndpoint("/swagger/v2/swagger.json", "GD Solutions v2 - Avançada (com PATCH)");
         options.RoutePrefix = string.Empty;
+        options.DefaultModelsExpandDepth(-1);
     });
 }
 
