@@ -2,6 +2,16 @@ using System.ComponentModel.DataAnnotations;
 
 namespace FuturoDoTrabalho.Api.DTOs
 {
+    // ====================================================================================
+    // DTOs: FUNCIONARIO
+    // ====================================================================================
+    // DTOs (Data Transfer Objects) são objetos usados para transferir dados entre camadas.
+    // Separam a estrutura de dados exposta pela API da estrutura interna do banco.
+    // Isso permite evoluir o modelo interno sem quebrar contratos da API.
+    // ====================================================================================
+
+    // DTO para criação de funcionário
+    // Usado no endpoint POST para receber dados do cliente
     public class FuncionarioCreateDto
     {
         [Required]
@@ -41,6 +51,8 @@ namespace FuturoDoTrabalho.Api.DTOs
         public bool Ativo { get; set; } = true;
     }
 
+    // DTO para atualização completa de funcionário (PUT)
+    // Usado no endpoint PUT - todos os campos devem ser fornecidos
     public class FuncionarioUpdateDto
     {
         [Required]
@@ -74,6 +86,9 @@ namespace FuturoDoTrabalho.Api.DTOs
         public bool Ativo { get; set; }
     }
 
+    // DTO para atualização parcial de funcionário (PATCH) - apenas v2
+    // Usado no endpoint PATCH - apenas campos fornecidos serão atualizados
+    // Todos os campos são opcionais (nullable)
     public class FuncionarioPatchDto
     {
         [StringLength(150, MinimumLength = 3)]
@@ -101,6 +116,8 @@ namespace FuturoDoTrabalho.Api.DTOs
         public bool? Ativo { get; set; }
     }
 
+    // DTO para leitura/consulta de funcionário
+    // Usado nas respostas GET - inclui dados calculados como nome do departamento
     public class FuncionarioReadDto
     {
         public int Id { get; set; }

@@ -5,30 +5,62 @@ using FuturoDoTrabalho.Api.Repositories;
 using FuturoDoTrabalho.Api.Services;
 using FuturoDoTrabalho.Api.Filters;
 
+// ====================================================================================
+// CONFIGURAÇÃO PRINCIPAL DA APLICAÇÃO
+// ====================================================================================
+// Este arquivo é responsável por configurar todos os serviços, middlewares e
+// dependências da API. É o ponto de entrada da aplicação ASP.NET Core.
+// ====================================================================================
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
+// ====================================================================================
+// REGISTRO DE SERVIÇOS
+// ====================================================================================
+
+// Adicionar serviços de controllers para processar requisições HTTP
 builder.Services.AddControllers();
 
-// Add AutoMapper
+// Configurar AutoMapper para conversão automática entre Models e DTOs
+// O AutoMapper facilita a transformação de objetos, evitando código repetitivo
 builder.Services.AddAutoMapper(typeof(Program));
 
-// Add API Versioning
+// ====================================================================================
+// CONFIGURAÇÃO DE VERSIONAMENTO DA API
+// ====================================================================================
+// Permite que a API tenha múltiplas versões (v1, v2) coexistindo simultaneamente.
+// Isso permite evoluir a API sem quebrar integrações existentes.
+// ====================================================================================
 builder.Services.AddApiVersioning(options =>
 {
+    // Versão padrão quando nenhuma versão é especificada na requisição
     options.DefaultApiVersion = new Microsoft.AspNetCore.Mvc.ApiVersion(1, 0);
+    
+    // Assumir versão padrão quando não especificada
     options.AssumeDefaultVersionWhenUnspecified = true;
+    
+    // Reportar versões disponíveis nos headers da resposta
     options.ReportApiVersions = true;
+    
+    // Configurar como a versão pode ser especificada:
+    // - Via header HTTP: X-API-Version
+    // - Via query string: ?api-version=2.0
     options.ApiVersionReader = ApiVersionReader.Combine(
         new Microsoft.AspNetCore.Mvc.Versioning.HeaderApiVersionReader("X-API-Version"),
         new Microsoft.AspNetCore.Mvc.Versioning.QueryStringApiVersionReader("api-version")
     );
 });
 
-// Add Swagger/OpenAPI
+// ====================================================================================
+// CONFIGURAÇÃO DO SWAGGER/OPENAPI
+// ====================================================================================
+// Swagger fornece documentação interativa da API, permitindo testar endpoints
+// diretamente no navegador. Configurado com suporte a múltiplas versões.
+// ====================================================================================
 builder.Services.AddOpenApi();
 builder.Services.AddSwaggerGen(options =>
 {
+    // Documentação da versão 1 (Básica - sem PATCH e sem paginação)
     options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "GD Solutions - API de Gestão de Funcionários",
@@ -36,6 +68,7 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API REST para gerenciamento de funcionários e departamentos - Versão 1 (Básica)",
     });
     
+    // Documentação da versão 2 (Avançada - com PATCH e paginação)
     options.SwaggerDoc("v2", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "GD Solutions - API de Gestão de Funcionários",
@@ -43,10 +76,11 @@ builder.Services.AddSwaggerGen(options =>
         Description = "API REST para gerenciamento de funcionários e departamentos - Versão 2 (Avançada com paginação e PATCH)",
     });
     
-    // Filtrar endpoints por versão - v1 exclui PATCH
+    // Filtrar endpoints por versão - v1 exclui métodos PATCH
+    // Garante que cada versão mostre apenas seus endpoints correspondentes
     options.DocInclusionPredicate((docName, apiDesc) =>
     {
-        // Verificar versão pelo caminho da ação
+        // Verificar versão pelo caminho da ação (namespace do controller)
         var actionDescriptor = apiDesc.ActionDescriptor;
         if (actionDescriptor == null)
             return true;
@@ -55,46 +89,68 @@ builder.Services.AddSwaggerGen(options =>
         
         if (docName == "v1")
         {
-            // v1 não deve mostrar PATCH
+            // v1 não deve mostrar métodos PATCH (apenas disponível na v2)
             var isPatchMethod = apiDesc.HttpMethod?.Equals("PATCH", StringComparison.OrdinalIgnoreCase) == true;
             if (isPatchMethod)
                 return false;
             
-            // Mostrar apenas endpoints de v1
+            // Mostrar apenas endpoints de controllers no namespace v1
             return controllerName?.Contains("FuturoDoTrabalho.Api.Controllers.v1") == true;
         }
 
         if (docName == "v2")
         {
-            // Mostrar apenas endpoints de v2
+            // Mostrar apenas endpoints de controllers no namespace v2
             return controllerName?.Contains("FuturoDoTrabalho.Api.Controllers.v2") == true;
         }
 
         return false;
     });
     
-    // Pré-preencer e bloquear o parâmetro "version" de acordo com a versão selecionada
+    // Aplicar filtro customizado para pré-preencher e bloquear parâmetro de versão
+    // Isso melhora a experiência no Swagger UI
     options.OperationFilter<SetVersionParameter>();
 });
 
-// Add MySQL Database Context
+// ====================================================================================
+// CONFIGURAÇÃO DO BANCO DE DADOS
+// ====================================================================================
+// Configuração do Entity Framework Core para trabalhar com MySQL.
+// O Pomelo.EntityFrameworkCore.MySql é o provider oficial para MySQL no EF Core.
+// ====================================================================================
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, 
         ServerVersion.AutoDetect(connectionString),
-        mysqlOptions => mysqlOptions.EnableRetryOnFailure())
+        mysqlOptions => mysqlOptions.EnableRetryOnFailure()) // Retry automático em caso de falha de conexão
 );
 
-// Register Repositories - New (GD Solutions)
+// ====================================================================================
+// REGISTRO DE REPOSITORIES (Padrão Repository)
+// ====================================================================================
+// Repositories abstraem o acesso aos dados, facilitando testes e manutenção.
+// Usando injeção de dependência com escopo por requisição (AddScoped).
+// ====================================================================================
 builder.Services.AddScoped(typeof(IGenericRepository<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IFuncionarioRepository, FuncionarioRepository>();
 builder.Services.AddScoped<IDepartamentoRepository, DepartamentoRepository>();
 
-// Register Services - New (GD Solutions)
+// ====================================================================================
+// REGISTRO DE SERVICES (Camada de Lógica de Negócio)
+// ====================================================================================
+// Services contêm a lógica de negócio e validações.
+// Atuam como intermediários entre Controllers e Repositories.
+// ====================================================================================
 builder.Services.AddScoped<IFuncionarioService, FuncionarioService>();
 builder.Services.AddScoped<IDepartamentoService, DepartamentoService>();
 
-// Add CORS
+// ====================================================================================
+// CONFIGURAÇÃO DE CORS (Cross-Origin Resource Sharing)
+// ====================================================================================
+// Permite que a API seja acessada de diferentes origens (domínios).
+// Configurado para permitir todas as origens (apenas para desenvolvimento).
+// Em produção, deve ser restrito a origens específicas.
+// ====================================================================================
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", builder =>
@@ -107,28 +163,44 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// ====================================================================================
+// CONFIGURAÇÃO DO PIPELINE HTTP
+// ====================================================================================
+// Define a ordem dos middlewares que processam as requisições HTTP.
+// A ordem é importante: cada middleware processa a requisição na ordem definida.
+// ====================================================================================
+
+// Configurações específicas para ambiente de desenvolvimento
 if (app.Environment.IsDevelopment())
 {
+    // Mapear endpoint OpenAPI para documentação
     app.MapOpenApi();
     
-    // Servir arquivo estático customizado do Swagger
+    // Servir arquivos estáticos (como o HTML customizado do Swagger)
     app.UseStaticFiles();
     
+    // Habilitar Swagger UI para documentação interativa
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
         options.SwaggerEndpoint("/swagger/v1/swagger.json", "GD Solutions v1 - Básica");
         options.SwaggerEndpoint("/swagger/v2/swagger.json", "GD Solutions v2 - Avançada (com PATCH)");
-        options.RoutePrefix = string.Empty;
-        options.DefaultModelsExpandDepth(-1);
+        options.RoutePrefix = string.Empty; // Swagger na raiz (/)
+        options.DefaultModelsExpandDepth(-1); // Não expandir modelos por padrão
     });
 }
 
+// Redirecionar requisições HTTP para HTTPS
 app.UseHttpsRedirection();
+
+// Aplicar política CORS configurada anteriormente
 app.UseCors("AllowAll");
+
+// Middleware de autorização (preparado para futura implementação de autenticação)
 app.UseAuthorization();
 
+// Mapear controllers para processar rotas
 app.MapControllers();
 
+// Iniciar a aplicação e aguardar requisições
 app.Run();

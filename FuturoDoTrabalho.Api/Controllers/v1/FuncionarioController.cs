@@ -4,6 +4,13 @@ using FuturoDoTrabalho.Api.Services;
 
 namespace FuturoDoTrabalho.Api.Controllers.v1
 {
+    // ====================================================================================
+    // CONTROLLER: FUNCIONARIO CONTROLLER V1
+    // ====================================================================================
+    // Controller da versão 1 da API para gerenciamento de funcionários.
+    // Versão básica: oferece operações CRUD completas (GET, POST, PUT, DELETE).
+    // Não possui paginação nem suporte a PATCH (atualização parcial).
+    // ====================================================================================
     [ApiController]
     [Route("api/v{version:apiVersion}/funcionario")]
     [ApiVersion("1.0")]

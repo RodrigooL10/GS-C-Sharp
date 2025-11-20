@@ -5,6 +5,13 @@ using FuturoDoTrabalho.Api.Repositories;
 
 namespace FuturoDoTrabalho.Api.Services
 {
+    // ====================================================================================
+    // SERVICE: DEPARTAMENTO SERVICE
+    // ====================================================================================
+    // Camada de lógica de negócio para operações relacionadas a departamentos.
+    // Responsável por validações, transformações e orquestração entre repositories.
+    // Atua como intermediário entre Controllers e Repositories, aplicando regras de negócio.
+    // ====================================================================================
     public class DepartamentoService : IDepartamentoService
     {
         private readonly IDepartamentoRepository _repository;
@@ -75,6 +82,7 @@ namespace FuturoDoTrabalho.Api.Services
             return _mapper.Map<IEnumerable<DepartamentoReadDto>>(departamentos);
         }
 
+        // Criar novo departamento com validações de negócio
         public async Task<DepartamentoReadDto> CreateAsync(DepartamentoCreateDto dto)
         {
             _logger.LogInformation("Criando novo departamento: {Nome}", dto.Nome);
@@ -82,18 +90,21 @@ namespace FuturoDoTrabalho.Api.Services
             if (dto == null)
                 throw new ArgumentNullException(nameof(dto));
 
-            // Validar nome único
+            // Validar se o nome é único (regra de negócio: nomes de departamentos devem ser únicos)
             var existente = await _repository.GetByNomeAsync(dto.Nome);
             if (existente != null)
                 throw new InvalidOperationException($"Já existe um departamento com o nome '{dto.Nome}'");
 
+            // Converter DTO para Model
             var departamento = _mapper.Map<Departamento>(dto);
-            departamento.Ativo = true;
+            departamento.Ativo = true; // Novo departamento sempre inicia como ativo
             departamento.DataCriacao = DateTime.UtcNow;
 
+            // Salvar no banco de dados
             await _repository.CreateAsync(departamento);
             await _repository.SaveChangesAsync();
 
+            // Converter de volta para DTO de resposta
             return _mapper.Map<DepartamentoReadDto>(departamento);
         }
 
@@ -110,7 +121,7 @@ namespace FuturoDoTrabalho.Api.Services
             if (departamento == null)
                 return null;
 
-            // Validar nome único (se mudou)
+            // Validar nome único apenas se o nome foi alterado
             if (departamento.Nome != dto.Nome)
             {
                 var existente = await _repository.GetByNomeAsync(dto.Nome);
@@ -168,7 +179,8 @@ namespace FuturoDoTrabalho.Api.Services
             if (departamento == null)
                 return false;
 
-            // Verificar se há funcionários associados
+            // Regra de negócio: não permitir deletar departamento que tenha funcionários
+            // Isso evita inconsistências no banco de dados (funcionários órfãos)
             if (departamento.Funcionarios?.Count > 0)
                 throw new InvalidOperationException($"Não é possível deletar o departamento. Existem {departamento.Funcionarios.Count} funcionários associados.");
 

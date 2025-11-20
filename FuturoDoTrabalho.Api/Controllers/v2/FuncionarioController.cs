@@ -4,6 +4,15 @@ using FuturoDoTrabalho.Api.Services;
 
 namespace FuturoDoTrabalho.Api.Controllers.v2
 {
+    // ====================================================================================
+    // CONTROLLER: FUNCIONARIO CONTROLLER V2
+    // ====================================================================================
+    // Controller da versão 2 da API para gerenciamento de funcionários.
+    // Versão avançada: inclui todas as funcionalidades da v1 mais:
+    // - Paginação nas listagens (GET com pageNumber e pageSize)
+    // - Atualização parcial via PATCH
+    // - Filtros avançados (por status ativo/inativo)
+    // ====================================================================================
     [ApiController]
     [Route("api/v{version:apiVersion}/funcionario")]
     [ApiVersion("2.0")]
@@ -32,17 +41,20 @@ namespace FuturoDoTrabalho.Api.Controllers.v2
         {
             _logger.LogInformation("Listando funcionários com paginação - Página {PageNumber}, Tamanho {PageSize}", pageNumber, pageSize);
 
+            // Validar e corrigir parâmetros de paginação
             if (pageNumber < 1) pageNumber = 1;
-            if (pageSize < 1 || pageSize > 100) pageSize = 10;
+            if (pageSize < 1 || pageSize > 100) pageSize = 10; // Limitar máximo de 100 itens por página
 
+            // Buscar dados paginados do service
             var (data, totalCount, pageCount) = await _funcionarioService.GetPagedAsync(pageNumber, pageSize);
 
-            // Filtrar por ativo se especificado
+            // Aplicar filtro por status ativo/inativo se especificado
             if (ativo.HasValue)
             {
                 data = data.Where(f => f.Ativo == ativo.Value).ToList();
             }
 
+            // Retornar resposta paginada com metadados
             return Ok(new
             {
                 data,

@@ -4,6 +4,14 @@ using FuturoDoTrabalho.Api.Services;
 
 namespace FuturoDoTrabalho.Api.Controllers.v2
 {
+    // ====================================================================================
+    // CONTROLLER: DEPARTAMENTO CONTROLLER V2
+    // ====================================================================================
+    // Controller da versão 2 da API para gerenciamento de departamentos.
+    // Versão avançada: inclui todas as funcionalidades da v1 mais:
+    // - Paginação nas listagens (GET com pageNumber e pageSize)
+    // - Atualização parcial via PATCH
+    // ====================================================================================
     [ApiController]
     [ApiVersion("2.0")]
     [Route("api/v{version:apiVersion}/[controller]")]
