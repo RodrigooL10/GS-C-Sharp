@@ -131,15 +131,7 @@ curl http://localhost:5015/api/v1/funcionario
 
 ### Criar Funcionário
 ```bash
-curl -X POST http://localhost:5015/api/v1/funcionario   -H "Content-Type: application/json" ```
-
----
-
-## 📄 Swagger
-
-Documentação disponível em:  
-```
-http://localhost:5015
+curl -X POST http://localhost:5015/api/v1/funcionario   -H "Content-Type: application/json"
 ```
 
 ---
